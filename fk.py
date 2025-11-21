@@ -1,6 +1,7 @@
 import numpy as np
 from conversions import *
 from operations import *
+from jacobians import *
 
 VecN = np.ndarray       # (N,)
 MatNx3 = np.ndarray     # (N, 3)
@@ -132,6 +133,10 @@ class FK1:
         Ts = []
         Ts.append(self.B) # First Append Base
         k=0
+        
+        self.joint_Ts = []
+        self.joint_screws = []
+        
         for i in range(len(self.screws)):
             if self.joints[i]==0:
                 T = T @ se3_exp(self.screws[i]*self.link_lens[i])
@@ -140,8 +145,17 @@ class FK1:
                 T = T @ se3_exp(self.screws[i]*(self.reference_conf[k]+q[k]))
                 k+=1
                 Ts.append(T)
+                self.joint_Ts.append(T)
+                self.joint_screws.append(self.screws[i])
 
         return T, Ts
+    
+    def compute_jacobians(self, g):
+        Js = get_spatial_jacobian(self.joint_Ts, self.joint_screws)
+        Jb = get_body_jacobian(g, Js)
+        Jw = get_world_jacobian(g, Js)
+        
+        return Js, Jb, Jw
     
         
 
@@ -163,4 +177,9 @@ if __name__=="__main__":
     
     new_Ts = rebase(Ts, Ts[-1], SE3_from_xyz_rpy(4,0,0,0,0,0))
     print(xyz_rpy_from_SE3(new_Ts[0]))
+    
+    Js, Jb, Jw = robot_fk.compute_jacobians(SE3_from_xyz_rpy(3,0,0,0,0,np.pi/2))
+    print(Js @ [1,0])
+    print(Jb @ [1,0])
+    print(Jw @ [1,0])
     

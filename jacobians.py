@@ -1,7 +1,18 @@
 from operations import *
 from conversions import *
 
-def get_spatial_jacobian(gs, screws):
+MatNx4x4 = np.ndarray # (N, 4, 4)
+Mat6xN = np.ndarray   # (6, N)
+
+def get_spatial_jacobian(gs: MatNx4x4, screws: MatNx4x4) -> Mat6xN:
+    """
+    Args:
+        gs (MatNx4x4, optional): SE(3) configuration of each joints
+        screws (MatNx4x4, optional): screw axis for joints
+
+    Returns:
+        Mat6xN: Spatial Jacobian
+    """
     Ads = []
     for i in range(len(gs)):
         Ads.append(se3_derepr(Ad(gs[i], screws[i])))
@@ -9,7 +20,17 @@ def get_spatial_jacobian(gs, screws):
     Js = np.vstack(Ads).T
     return Js
 
-def get_body_jacobian(g, Js=None, gs=None, screws=None):
+def get_body_jacobian(g: Mat4x4, Js: Mat6xN = None, gs: MatNx4x4 = None, screws: MatNx4x4 = None) -> Mat6xN:
+    """
+    Args:
+        g (Mat4x4): SE(3) element representing end-effector, or any other frame whose velocity is required
+        Js (Mat6xN, optional): Spatial Jacobian
+        gs (MatNx4x4, optional): SE(3) configuration of each joints
+        screws (MatNx4x4, optional): screw axis for joints
+
+    Returns:
+        Mat6xN: Body Jacobian
+    """
     if Js is None:
         Js = get_spatial_jacobian(gs, screws)
     
@@ -20,7 +41,17 @@ def get_body_jacobian(g, Js=None, gs=None, screws=None):
     Jb = np.vstack(Ad_invs).T
     return Jb
 
-def get_world_jacobian(g, Js=None, gs=None, screws=None):
+def get_world_jacobian(g: Mat4x4, Js: Mat6xN = None, gs: MatNx4x4 = None, screws: MatNx4x4 = None) -> Mat6xN:
+    """
+    Args:
+        g (Mat4x4): SE(3) element representing end-effector, or any other frame whose velocity is required
+        Js (Mat6xN, optional): Spatial Jacobian
+        gs (MatNx4x4, optional): SE(3) configuration of each joints
+        screws (MatNx4x4, optional): screw axis for joints
+
+    Returns:
+        Mat6xN: World Jacobian
+    """
     if Js is None:
         Js = get_spatial_jacobian(gs, screws)
     
@@ -30,12 +61,3 @@ def get_world_jacobian(g, Js=None, gs=None, screws=None):
     
     Jw = np.vstack(TeRgs).T
     return Jw
-        
-Js = get_spatial_jacobian([SE3_from_xyz_rpy(0, 0, 0, 0, 0, 0), SE3_from_xyz_rpy(1, 0, 0, 0, 0, 0)], [se3_repr([0, 0, 0, 0, 0, 1]), se3_repr([0, 0, 0, 0, 0, -1])])
-print(Js)
-
-Jb = get_body_jacobian(SE3_from_xyz_rpy(0.5, 0.5, 0, 0, 0, 0), Js)
-print(Jb)
-
-Jw = get_world_jacobian(SE3_from_xyz_rpy(0.5, 0.5, 0, 0, 0, 0), Js)
-print(Jw)
